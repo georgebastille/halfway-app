@@ -90,13 +90,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        <header className="text-center mb-10">
-          <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400">
-            Halfway
-          </h1>
-          <p className="text-gray-600 mt-2">Find the perfect meeting spot in London</p>
-        </header>
-
         <main className="max-w-2xl mx-auto">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
