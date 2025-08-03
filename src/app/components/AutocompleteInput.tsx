@@ -43,19 +43,23 @@ export default function AutocompleteInput({ id, value, onChange, allStations }: 
   };
 
   return (
-    <div ref={containerRef} className="station-input-group">
+    <div ref={containerRef} className="relative w-full">
       <input
         type="text"
         id={id}
         value={value}
         onChange={handleInputChange}
         placeholder="Enter station name"
-        className="station-input"
+        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
       />
       {suggestions.length > 0 && (
-        <div className="autocomplete-items">
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
           {suggestions.map(suggestion => (
-            <div key={suggestion} onClick={() => handleSuggestionClick(suggestion)}>
+            <div
+              key={suggestion}
+              onClick={() => handleSuggestionClick(suggestion)}
+              className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+            >
               {suggestion}
             </div>
           ))}

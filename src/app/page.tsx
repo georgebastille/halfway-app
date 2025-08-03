@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import AutocompleteInput from './components/AutocompleteInput';
 import { MeetingPointResult } from '../lib/models';
+import { UserGroupIcon, ClockIcon, PlusCircleIcon, MapPinIcon } from '@heroicons/react/24/outline';
+
 
 export default function Home() {
   const [stationInputs, setStationInputs] = useState<string[]>(['', '']);
@@ -86,65 +88,99 @@ export default function Home() {
 
 
   return (
-    <div className="container">
-      <h1 className="text-3xl font-bold underline">Halfway</h1>
+    <div className="min-h-screen bg-gray-100 text-gray-800">
+      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header className="text-center mb-10">
+          <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400">
+            Halfway
+          </h1>
+          <p className="text-gray-600 mt-2">Find the perfect meeting spot in London</p>
+        </header>
 
-      <div id="station-inputs">
-        {stationInputs.map((input, index) => (
-          <div key={index} className="station-input-group">
-            <label htmlFor={`station${index + 1}`}>Starting Point {index + 1}:</label>
-            <AutocompleteInput
-              id={`station${index + 1}`}
-              value={input}
-              onChange={(value) => handleStationChange(index, value)}
-              allStations={allStations}
-            />
+        <main className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
+              <UserGroupIcon className="h-6 w-6 mr-3" />
+              Starting Points
+            </h2>
+
+            <div id="station-inputs" className="space-y-4 mb-6">
+              {stationInputs.map((input, index) => (
+                <div key={index} className="flex items-center space-x-3">
+                  <label htmlFor={`station${index + 1}`} className="text-gray-600 w-28">
+                    Station {index + 1}:
+                  </label>
+                  <AutocompleteInput
+                    id={`station${index + 1}`}
+                    value={input}
+                    onChange={(value) => handleStationChange(index, value)}
+                    allStations={allStations}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addStationInput}
+              className="w-full flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 rounded-md text-gray-500 hover:text-gray-700 hover:border-gray-400 transition"
+            >
+              <PlusCircleIcon className="h-5 w-5 mr-2" />
+              Add Another Starting Point
+            </button>
+
+            <div className="mt-8">
+              <label htmlFor="fairness-slider" className="flex items-center text-lg font-medium mb-3 text-gray-700">
+                <ClockIcon className="h-6 w-6 mr-3" />
+                Fairness vs. Speed
+              </label>
+              <input
+                type="range"
+                id="fairness-slider"
+                min="0"
+                max="4"
+                step="1"
+                value={fairnessSlider}
+                onChange={handleSliderChange}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="text-center text-gray-600 mt-2" id="slider-value">
+                {sliderValueText}
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
-      <button onClick={addStationInput}>Add Another Starting Point</button>
 
-      <div className="slider-group">
-        <label htmlFor="fairness-slider">Fairness vs. Speed:</label>
-        <input
-          type="range"
-          id="fairness-slider"
-          min="0"
-          max="4"
-          step="1"
-          value={fairnessSlider}
-          onChange={handleSliderChange}
-        />
-        <span id="slider-value">{sliderValueText}</span>
-      </div>
-
-      <div id="results">
-        <h2>Results:</h2>
-        {isLoading && <p>Loading...</p>}
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <ul id="results-list">
-          {results.length > 0 ? (
-            results.slice(0, 5).map(result => (
-              <li key={result.station_code} className="result-card">
-                <h3>{result.station_name}</h3>
-                <div className="journeys-container">
-                  {result.journeys.map(journey => (
-                    <div key={journey.from_station} className="journey">
-                      <span className="from">{journey.from_station}</span>
-                      <span className="time">{journey.time} min</span>
+          <div id="results" className="mt-10">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
+              <MapPinIcon className="h-6 w-6 mr-3" />
+              Top 5 Stations to Meet at:
+            </h2>
+            {isLoading && <p className="text-center">Finding the best spots...</p>}
+            {error && <p className="text-center text-red-500">{error}</p>}
+            <ul className="space-y-4">
+              {results.length > 0 ? (
+                results.slice(0, 5).map(result => (
+                  <li key={result.station_code} className="bg-white rounded-lg shadow-md p-5 transition hover:shadow-lg">
+                    <h3 className="text-xl font-bold text-blue-600">{result.station_name}</h3>
+                    <div className="mt-4 space-y-2">
+                      {result.journeys.map(journey => (
+                        <div key={journey.from_station} className="flex justify-between items-center text-gray-700">
+                          <span className="font-medium">{journey.from_station}</span>
+                          <span className="text-lg font-semibold">{journey.time} min</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <div className="stats">
-                  <span>Avg: {result.mean_time.toFixed(1)}m</span>
-                  <span>Unfairness: {result.variance.toFixed(1)}</span>
-                </div>
-              </li>
-            ))
-          ) : (
-            !isLoading && !error && <li>No meeting points found.</li>
-          )}
-        </ul>
+                    <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between text-gray-500 text-sm">
+                      <span>Avg: {result.mean_time.toFixed(1)}m</span>
+                      <span>Unfairness: {result.variance.toFixed(1)}</span>
+                    </div>
+                  </li>
+                ))
+              ) : (
+                !isLoading && !error && <li className="text-center text-gray-500">No meeting points found. Try different stations.</li>
+              )}
+            </ul>
+          </div>
+        </main>
       </div>
     </div>
   );
