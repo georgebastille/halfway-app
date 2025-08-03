@@ -6,6 +6,8 @@ import { MeetingPointResult } from '../lib/models';
 import { UserGroupIcon, ClockIcon, PlusCircleIcon, MapPinIcon } from '@heroicons/react/24/outline';
 
 
+import Link from 'next/link';
+
 export default function Home() {
   const [stationInputs, setStationInputs] = useState<string[]>(['', '']);
   const [allStations, setAllStations] = useState<string[]>([]);
@@ -97,6 +99,12 @@ export default function Home() {
           <p className="text-gray-600 mt-2">Find the perfect meeting spot in London</p>
         </header>
 
+        <nav className="text-center mb-10">
+          <Link href="/about" className="text-blue-600 hover:underline">
+            About this App
+          </Link>
+        </nav>
+
         <main className="max-w-2xl mx-auto">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
@@ -108,7 +116,7 @@ export default function Home() {
               {stationInputs.map((input, index) => (
                 <div key={index} className="flex items-center space-x-3">
                   <label htmlFor={`station${index + 1}`} className="text-gray-600 w-28">
-                    Station {index + 1}:
+                    Person {index + 1}:
                   </label>
                   <AutocompleteInput
                     id={`station${index + 1}`}
@@ -130,8 +138,7 @@ export default function Home() {
 
             <div className="mt-8">
               <label htmlFor="fairness-slider" className="flex items-center text-lg font-medium mb-3 text-gray-700">
-                <ClockIcon className="h-6 w-6 mr-3" />
-                Fairness vs. Speed
+				Fairness vs. Speed
               </label>
               <input
                 type="range"
@@ -152,7 +159,7 @@ export default function Home() {
           <div id="results" className="mt-10">
             <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
               <MapPinIcon className="h-6 w-6 mr-3" />
-              Top 5 Stations to Meet at:
+              Top 5 Meeting Points
             </h2>
             {isLoading && <p className="text-center">Finding the best spots...</p>}
             {error && <p className="text-center text-red-500">{error}</p>}
