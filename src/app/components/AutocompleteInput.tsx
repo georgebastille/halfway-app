@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Fuse from 'fuse.js';
 
 interface AutocompleteInputProps {
   id: string;
@@ -13,6 +14,16 @@ interface AutocompleteInputProps {
 export default function AutocompleteInput({ id, value, onChange, allStations }: AutocompleteInputProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fuseRef = useRef<Fuse<string> | null>(null);
+
+  useEffect(() => {
+    if (allStations.length > 0) {
+      fuseRef.current = new Fuse(allStations, {
+        threshold: 0.3,
+        keys: [],
+      });
+    }
+  }, [allStations]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -27,11 +38,9 @@ export default function AutocompleteInput({ id, value, onChange, allStations }: 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
-    if (newValue) {
-      const filteredSuggestions = allStations
-        .filter(station => typeof station === 'string' && station.toLowerCase().startsWith(newValue.toLowerCase()))
-        .slice(0, 10);
-      setSuggestions(filteredSuggestions);
+    if (newValue && fuseRef.current) {
+      const results = fuseRef.current.search(newValue);
+      setSuggestions(results.map(result => result.item).slice(0, 10));
     } else {
       setSuggestions([]);
     }
