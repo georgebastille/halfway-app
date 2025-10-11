@@ -9,13 +9,14 @@ FILE_PATH="tfl.db"              # path in the repo
 OUT_PATH="tfl.db"               # where your app expects it (change if needed)
 # ----------------------------------------------------
 
-RAW_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${REF}/${FILE_PATH}"
+RAW_URL="https://github.com/georgebastille/halfway-app/raw/refs/heads/main/tfl.db?download="
 
 mkdir -p "$(dirname "$OUT_PATH")"
 
 # If it's a private repo, set GITHUB_TOKEN in Vercel → Project → Settings → Environment Variables
 HDR=()
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  echo "Using GITHUB_TOKEN for authentication."
   HDR=(-H "Authorization: token ${GITHUB_TOKEN}")
 fi
 
@@ -29,4 +30,5 @@ if ! head -c 16 "$OUT_PATH" | grep -q "SQLite format 3"; then
   echo "ERROR: Downloaded file is not a SQLite DB (got a pointer/page?)." >&2
   exit 1
 fi
+
 
