@@ -1,3 +1,3 @@
 {
-	"buildCommand": "git lfs install && git lfs pull && vercel build"
+	"buildCommand": "./scripts/fetch_db.sh && npm run build"
 }
