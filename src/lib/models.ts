@@ -1,6 +1,12 @@
 
-export interface StationInput {
-  stations: string[];
+export interface StationOption {
+  id: string;
+  name: string;
+}
+
+export interface StationSelection {
+  id: string | null;
+  name: string;
 }
 
 export interface Journey {

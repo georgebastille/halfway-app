@@ -1,8 +1,8 @@
 ## Project Overview
 
-This is a Next.js application that helps users find the fairest or fastest meeting point in London based on travel times from various tube, overground, and tram stations. The application is built with TypeScript, Tailwind CSS for styling, and uses a pre-built SQLite database (`tfl.db`) to store station and travel time information.
+This is a Next.js application that helps users find the fairest or fastest meeting point in London based on travel times from various tube, overground, and tram stations. The application is built with TypeScript, Tailwind CSS for styling, and uses JSON Lines datasets to describe station metadata and network connectivity.
 
-The frontend is a single-page application where users can input multiple starting stations. The backend, implemented using Next.js API routes, queries the SQLite database to find all possible meeting points and then calculates the best option based on a user-defined "fairness" weight. The "fairest" option minimizes the variance in travel times, while the "fastest" option minimizes the average travel time.
+The frontend is a single-page application where users can input multiple starting stations. The backend, implemented using Next.js API routes, loads the transport graph from the JSONL files, computes travel times with Dijkstra’s algorithm, and then calculates the best meeting option based on a user-defined "fairness" weight. The "fairest" option minimizes the variance in travel times, while the "fastest" option minimizes the average travel time.
 
 ## Building and Running
 
@@ -45,6 +45,6 @@ The frontend is a single-page application where users can input multiple startin
 *   **Language:** The entire codebase is written in TypeScript.
 *   **Styling:** Tailwind CSS is used for styling.
 *   **API:** The backend is implemented as API routes within the `src/app/api` directory.
-*   **Database:** The application uses a SQLite database (`tfl.db`) accessed via the `better-sqlite3` library. The database connection is managed in `src/lib/db.ts`.
+*   **Data:** Transport data is stored as JSONL files under `src/data`. Helper utilities in `src/lib/stations.ts` and `src/lib/network.ts` load station metadata, build the network graph, and expose travel-time calculations.
 *   **Logic:** The core logic for calculating the meeting points is located in `src/lib/logic.ts`.
 *   **Components:** Reusable React components are stored in the `src/app/components` directory.

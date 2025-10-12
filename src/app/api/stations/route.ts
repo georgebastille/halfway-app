@@ -1,20 +1,15 @@
 
 import { NextResponse } from 'next/server';
-import { getDb } from '../../../lib/db';
+import { getStationOptions } from '../../../lib/stations';
 
-interface StationRow {
-  NAME: string;
-}
-
-export function GET() {
+export async function GET() {
   try {
-    const db = getDb();
-    const stmt = db.prepare('SELECT NAME FROM Stations');
-    const stations = (stmt.all() as StationRow[]).map((station) => station.NAME);
+    const stations = await getStationOptions();
     return NextResponse.json(stations);
   } catch (error: unknown) {
     console.error(error);
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    const errorMessage =
+      error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

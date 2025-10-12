@@ -1,21 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import type { StationOption, StationSelection } from "../../lib/models";
 
 interface AutocompleteInputProps {
   id: string;
-  value: string;
-  onChange: (value: string) => void;
-  allStations: string[];
+  value: StationSelection;
+  onChange: (value: StationSelection) => void;
+  options: StationOption[];
 }
 
 export default function AutocompleteInput({
   id,
   value,
   onChange,
-  allStations,
+  options,
 }: AutocompleteInputProps) {
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<StationOption[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,14 +32,17 @@ export default function AutocompleteInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fuzzyMatch = (query: string, stations: string[]): string[] => {
+  const fuzzyMatch = (
+    query: string,
+    stations: StationOption[],
+  ): StationOption[] => {
     if (!query || query.length === 0) return [];
 
     const normalizedQuery = query.toLowerCase().trim();
-    const matches: { station: string; score: number }[] = [];
+    const matches: { station: StationOption; score: number }[] = [];
 
     stations.forEach((station) => {
-      const normalizedStation = station.toLowerCase();
+      const normalizedStation = station.name.toLowerCase();
       let score = 0;
 
       // Exact match (highest priority)
@@ -115,7 +119,7 @@ export default function AutocompleteInput({
 
       // Boost score for shorter station names (more likely to be exact matches)
       if (score > 0) {
-        const lengthBonus = Math.max(0, 50 - station.length);
+        const lengthBonus = Math.max(0, 50 - station.name.length);
         score += lengthBonus;
       }
 
@@ -133,18 +137,18 @@ export default function AutocompleteInput({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    onChange(newValue);
+    onChange({ id: null, name: newValue });
 
     if (newValue && newValue.length > 0) {
-      const results = fuzzyMatch(newValue, allStations);
+      const results = fuzzyMatch(newValue, options);
       setSuggestions(results);
     } else {
       setSuggestions([]);
     }
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    onChange(suggestion);
+  const handleSuggestionClick = (suggestion: StationOption) => {
+    onChange({ id: suggestion.id, name: suggestion.name });
     setSuggestions([]);
   };
 
@@ -153,7 +157,7 @@ export default function AutocompleteInput({
       <input
         type="text"
         id={id}
-        value={value}
+        value={value.name}
         onChange={handleInputChange}
         placeholder="Enter station name"
         className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
@@ -162,11 +166,11 @@ export default function AutocompleteInput({
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
           {suggestions.map((suggestion) => (
             <div
-              key={suggestion}
+              key={suggestion.id}
               onClick={() => handleSuggestionClick(suggestion)}
               className="px-4 py-2 cursor-pointer hover:bg-gray-100"
             >
-              {suggestion}
+              {suggestion.name}
             </div>
           ))}
         </div>

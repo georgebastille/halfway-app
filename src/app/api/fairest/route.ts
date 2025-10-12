@@ -2,87 +2,112 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MeetingPointResult, Journey } from '../../../lib/models';
 import { calculateMeetingPoints } from '../../../lib/logic';
-import { getDb } from '../../../lib/db';
+import { getStationMap } from '../../../lib/stations';
+import { getTravelTimesFromStation } from '../../../lib/network';
+import { toTitleCase } from '../../../lib/strings';
 
-interface JourneyRow {
-  STATIONA: string;
-  STATIONB: string;
-  WEIGHT: number;
-  STATIONB_NAME: string;
+interface FairestRequestBody {
+  stations: string[];
+  fairnessWeight?: number;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { stations: stationNames, fairnessWeight = 0.5 }: { stations: string[], fairnessWeight: number } = await req.json();
+    const { stations: stationIds, fairnessWeight = 0.5 }: FairestRequestBody =
+      await req.json();
 
-    if (!stationNames || stationNames.length < 2) {
-      return NextResponse.json({ error: 'Please provide at least two starting stations.' }, { status: 400 });
+    if (!stationIds || stationIds.length < 2) {
+      return NextResponse.json(
+        { error: 'Please provide at least two starting stations.' },
+        { status: 400 },
+      );
     }
 
-    const db = getDb();
+    const stationMap = await getStationMap();
 
-    // 1. Get station codes for the input station names
-    const getCodeStmt = db.prepare('SELECT CODE FROM STATIONS WHERE NAME = ?');
-    const stationCodes = stationNames.map(name => {
-      const row = getCodeStmt.get(name) as { CODE: string };
-      if (!row) {
-        throw new Error(`Station not found: ${name}`);
-      }
-      return row.CODE;
-    });
+    const missingStations = stationIds.filter(
+      (stationId) => !stationMap.has(stationId),
+    );
 
-    // 2. Construct and execute the query to get journey data
-    const placeholders = stationCodes.map(() => '?').join(',');
-    const query = `
-      SELECT
-          FR.STATIONA,
-          FR.STATIONB,
-          FR.WEIGHT,
-          S.NAME AS STATIONB_NAME
-      FROM
-          FULLROUTES AS FR
-      JOIN
-          STATIONS AS S ON FR.STATIONB = S.CODE
-      WHERE
-          FR.STATIONA IN (${placeholders})
-    `;
-
-    const allJourneyRows = db.prepare(query).all(...stationCodes) as JourneyRow[];
-
-    const journeyData: { [key: string]: { [key: string]: number } } = {};
-    const stationNamesMap: { [key: string]: string } = {};
-
-    for (const row of allJourneyRows) {
-      const { STATIONA, STATIONB, WEIGHT, STATIONB_NAME } = row;
-      if (!journeyData[STATIONB]) {
-        journeyData[STATIONB] = {};
-      }
-      journeyData[STATIONB][STATIONA] = WEIGHT;
-      stationNamesMap[STATIONB] = STATIONB_NAME;
+    if (missingStations.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Unknown station ids: ${missingStations.join(', ')}`,
+        },
+        { status: 400 },
+      );
     }
 
-    // 3. Filter and structure data for calculation
-    const filteredJourneyData: { [key: string]: number[] } = {};
-    for (const stationBCode in journeyData) {
-      const journeys = journeyData[stationBCode];
-      if (Object.keys(journeys).length === stationCodes.length) {
-        const orderedTimes = stationCodes.map(code => journeys[code]);
-        if (orderedTimes.every(t => t !== undefined)) {
-            filteredJourneyData[stationBCode] = orderedTimes;
+    const travelTimes = await Promise.all(
+      stationIds.map(async (stationId) =>
+        getTravelTimesFromStation(stationId),
+      ),
+    );
+
+    const aggregatedJourneys: Record<string, number[]> = {};
+    const stationCount = stationIds.length;
+
+    for (let idx = 0; idx < stationCount; idx += 1) {
+      const timeMap = travelTimes[idx];
+
+      for (const [destinationId, travelTime] of timeMap.entries()) {
+        if (!aggregatedJourneys[destinationId]) {
+          aggregatedJourneys[destinationId] = new Array<number>(stationCount).fill(
+            Number.POSITIVE_INFINITY,
+          );
         }
+
+        aggregatedJourneys[destinationId][idx] = travelTime;
       }
     }
 
-    // 4. Calculate meeting points
-    const calculatedResults = calculateMeetingPoints(filteredJourneyData, fairnessWeight);
+    const filteredJourneyData: Record<string, number[]> = {};
 
-    // 5. Format final results
-    const finalResults: MeetingPointResult[] = calculatedResults.map(result => {
-      const stationName = stationNamesMap[result.station_code] || 'Unknown';
-      const journeys: Journey[] = stationNames.map((startStation, i) => ({
-        from_station: startStation,
-        time: result.times[i],
-      }));
+    for (const [destinationId, times] of Object.entries(aggregatedJourneys)) {
+      if (!stationMap.has(destinationId)) {
+        continue;
+      }
+
+      const hasCompleteCoverage = times.every(
+        (time) => Number.isFinite(time) && time >= 0,
+      );
+
+      if (hasCompleteCoverage) {
+        filteredJourneyData[destinationId] = times;
+      }
+    }
+
+    if (Object.keys(filteredJourneyData).length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            'No common meeting stations found for the provided starting points.',
+        },
+        { status: 404 },
+      );
+    }
+
+    const calculatedResults = calculateMeetingPoints(
+      filteredJourneyData,
+      fairnessWeight,
+    );
+
+    const finalResults: MeetingPointResult[] = calculatedResults.map((result) => {
+      const destinationStation = stationMap.get(result.station_code);
+      const stationName = destinationStation
+        ? toTitleCase(destinationStation.station_name)
+        : 'Unknown';
+      const journeys: Journey[] = stationIds.map((stationId, index) => {
+        const originStation = stationMap.get(stationId);
+        const originName = originStation
+          ? toTitleCase(originStation.station_name)
+          : stationId;
+        return {
+          from_station: originName,
+          time: result.times[index],
+        };
+      });
+
       return {
         ...result,
         station_name: stationName,
@@ -91,10 +116,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(finalResults);
-
   } catch (error: unknown) {
     console.error(error);
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    const errorMessage =
+      error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

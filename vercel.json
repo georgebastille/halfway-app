@@ -1,3 +1,0 @@
-{
-	"buildCommand": "./scripts/fetch_db.sh && npm run build"
-}

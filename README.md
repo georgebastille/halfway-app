@@ -17,11 +17,11 @@ This application is a modern web app built with the following technologies:
 
 *   **Framework:** [Next.js](https://nextjs.org/) (React)
 *   **Language:** [TypeScript](https://www.typescriptlang.org/)
-*   **Database:** [SQLite](https://www.sqlite.org/index.html) (via the `better-sqlite3` package)
+*   **Data:** Precomputed station and line metadata stored as JSON Lines files
 *   **Styling:** [Tailwind CSS](https://tailwindcss.com/)
 *   **Deployment:** [Vercel](https://vercel.com/)
 
-The backend logic and API are handled by Next.js API Routes, which query a pre-built SQLite database containing all station-to-station travel times.
+The backend logic and API are handled by Next.js API Routes, which load the network graph from JSONL files at startup and use Dijkstra’s algorithm to calculate travel times on demand.
 
 ## Getting Started
 

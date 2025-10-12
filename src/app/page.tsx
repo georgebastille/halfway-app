@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import AutocompleteInput from "./components/AutocompleteInput";
-import { MeetingPointResult } from "../lib/models";
+import type {
+  MeetingPointResult,
+  StationOption,
+  StationSelection,
+} from "../lib/models";
 import {
   UserGroupIcon,
   ClockIcon,
@@ -11,8 +15,12 @@ import {
 } from "@heroicons/react/24/outline";
 
 export default function Home() {
-  const [stationInputs, setStationInputs] = useState<string[]>(["", ""]);
-  const [allStations, setAllStations] = useState<string[]>([]);
+  const createEmptySelection = (): StationSelection => ({ id: null, name: "" });
+  const [stationInputs, setStationInputs] = useState<StationSelection[]>([
+    createEmptySelection(),
+    createEmptySelection(),
+  ]);
+  const [stationOptions, setStationOptions] = useState<StationOption[]>([]);
   const [fairnessSlider, setFairnessSlider] = useState(2);
   const [sliderValueText, setSliderValueText] = useState("Balanced");
   const [results, setResults] = useState<MeetingPointResult[]>([]);
@@ -22,18 +30,20 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/stations")
       .then((res) => res.json())
-      .then((data) => setAllStations(data))
+      .then((data: StationOption[]) => setStationOptions(data))
       .catch((err) => console.error("Failed to fetch stations:", err));
   }, []);
 
-  const handleStationChange = (index: number, value: string) => {
-    const newInputs = [...stationInputs];
-    newInputs[index] = value;
-    setStationInputs(newInputs);
+  const handleStationChange = (index: number, value: StationSelection) => {
+    setStationInputs((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
   };
 
   const addStationInput = () => {
-    setStationInputs([...stationInputs, ""]);
+    setStationInputs((prev) => [...prev, createEmptySelection()]);
   };
 
   const updateSliderText = (value: number) => {
@@ -53,13 +63,16 @@ export default function Home() {
     updateSliderText(value);
   };
 
+  type StationSelectionWithId = StationSelection & { id: string };
+
   const fetchMeetingPoints = useCallback(async () => {
-    const validStations = stationInputs.filter(
-      (s) => s.trim() !== "" && allStations.includes(s),
+    const validSelections = stationInputs.filter(
+      (selection): selection is StationSelectionWithId =>
+        typeof selection.id === "string" && selection.id.length > 0,
     );
-    if (validStations.length < 2) {
+    if (validSelections.length < 2) {
       setResults([]);
-      setError("Please enter at least two valid station names.");
+      setError("Please enter at least two valid station selections.");
       return;
     }
 
@@ -71,7 +84,10 @@ export default function Home() {
       const response = await fetch("/api/fairest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stations: validStations, fairnessWeight }),
+        body: JSON.stringify({
+          stations: validSelections.map((selection) => selection.id),
+          fairnessWeight,
+        }),
       });
 
       if (!response.ok) {
@@ -89,7 +105,7 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, [stationInputs, fairnessSlider, allStations]);
+  }, [stationInputs, fairnessSlider]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -134,7 +150,7 @@ export default function Home() {
                     id={`station${index + 1}`}
                     value={input}
                     onChange={(value) => handleStationChange(index, value)}
-                    allStations={allStations}
+                    options={stationOptions}
                   />
                 </div>
               ))}
