@@ -242,15 +242,6 @@ function collectCoordinates(
   return coords;
 }
 
-function getBoundsSignature(coords: Coordinate[]): string {
-  if (coords.length === 0) {
-    return "none";
-  }
-  return coords
-    .map(([lng, lat]) => `${lng.toFixed(4)},${lat.toFixed(4)}`)
-    .join(";");
-}
-
 export default function MapView({
   origins,
   destination,
@@ -260,7 +251,6 @@ export default function MapView({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const isMapReadyRef = useRef(false);
-  const lastBoundsSignatureRef = useRef<string>("none");
 
   useEffect(() => {
     let isCancelled = false;
@@ -428,36 +418,30 @@ export default function MapView({
     changesSource?.setData(changeFeatures);
 
     const coords = collectCoordinates(origins, destination, routes);
-    const signature = getBoundsSignature(coords);
-
-    if (signature !== lastBoundsSignatureRef.current) {
-      lastBoundsSignatureRef.current = signature;
-
-      if (coords.length === 0) {
-        map.easeTo({
-          center: DEFAULT_CENTER,
-          zoom: DEFAULT_ZOOM,
-          duration: 800,
-        });
-      } else if (coords.length === 1) {
-        map.easeTo({
-          center: coords[0],
-          zoom: 12,
-          duration: 800,
-        });
-      } else {
-        const bounds = coords.reduce(
-          (acc, coord) => acc.extend(coord),
-          new maplibregl.LngLatBounds(coords[0], coords[0]),
-        );
-        map.fitBounds(bounds, {
-          padding: Math.min(
-            Math.max(map.getCanvas().width, map.getCanvas().height) * 0.1,
-            120,
-          ),
-          duration: 800,
-        });
-      }
+    if (coords.length === 0) {
+      map.easeTo({
+        center: DEFAULT_CENTER,
+        zoom: DEFAULT_ZOOM,
+        duration: 800,
+      });
+    } else if (coords.length === 1) {
+      map.easeTo({
+        center: coords[0],
+        zoom: 12,
+        duration: 800,
+      });
+    } else {
+      const bounds = coords.reduce(
+        (acc, coord) => acc.extend(coord),
+        new maplibregl.LngLatBounds(coords[0], coords[0]),
+      );
+      map.fitBounds(bounds, {
+        padding: Math.min(
+          Math.max(map.getCanvas().width, map.getCanvas().height) * 0.1,
+          120,
+        ),
+        duration: 800,
+      });
     }
 
     map.resize();
