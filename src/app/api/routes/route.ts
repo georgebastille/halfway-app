@@ -18,7 +18,44 @@ interface RoutesRequestBody {
   destination: string;
 }
 
-function toRouteStation(record: StationRecord | undefined, stationId: string): RouteStation {
+function createStationCodeMap(stations: Iterable<StationRecord>): Map<string, StationRecord> {
+  const codeMap = new Map<string, StationRecord>();
+  for (const station of stations) {
+    const code = station.code?.trim().toUpperCase();
+    if (code && !codeMap.has(code)) {
+      codeMap.set(code, station);
+    }
+  }
+  return codeMap;
+}
+
+function resolveStationRecord(
+  stationId: string,
+  stationMap: Map<string, StationRecord>,
+  stationCodeMap: Map<string, StationRecord>,
+): StationRecord | undefined {
+  const directRecord = stationMap.get(stationId);
+  if (directRecord) {
+    return directRecord;
+  }
+
+  if (stationId.startsWith("HUB") && stationId.length > 3) {
+    const potentialCode = stationId.slice(3).toUpperCase();
+    const codeRecord = stationCodeMap.get(potentialCode);
+    if (codeRecord) {
+      return codeRecord;
+    }
+  }
+
+  return undefined;
+}
+
+function toRouteStation(
+  stationId: string,
+  stationMap: Map<string, StationRecord>,
+  stationCodeMap: Map<string, StationRecord>,
+): RouteStation {
+  const record = resolveStationRecord(stationId, stationMap, stationCodeMap);
   if (!record) {
     return {
       station_id: stationId,
@@ -28,11 +65,14 @@ function toRouteStation(record: StationRecord | undefined, stationId: string): R
     };
   }
 
+  const latitude = record.latitude ?? null;
+  const longitude = record.longitude ?? null;
+
   return {
     station_id: record.station_id,
     station_name: toTitleCase(record.station_name),
-    latitude: record.latitude ?? null,
-    longitude: record.longitude ?? null,
+    latitude,
+    longitude,
   };
 }
 
@@ -53,6 +93,7 @@ function extractSegmentLine(current: RouteStep, next: RouteStep) {
 function buildSegments(
   steps: RouteStep[],
   stationMap: Map<string, StationRecord>,
+  stationCodeMap: Map<string, StationRecord>,
 ): { segments: RouteSegment[]; interchangeIds: Set<string> } {
   const segments: RouteSegment[] = [];
   const interchangeIds = new Set<string>();
@@ -72,8 +113,8 @@ function buildSegments(
       continue;
     }
 
-    const fromStation = toRouteStation(stationMap.get(current.stationId), current.stationId);
-    const toStation = toRouteStation(stationMap.get(next.stationId), next.stationId);
+    const fromStation = toRouteStation(current.stationId, stationMap, stationCodeMap);
+    const toStation = toRouteStation(next.stationId, stationMap, stationCodeMap);
 
     segments.push({
       from: fromStation,
@@ -119,21 +160,20 @@ export async function POST(req: NextRequest) {
 
     const uniqueOrigins = [...new Set(origins)];
     const stationMap = await getStationMap();
+    const stationCodeMap = createStationCodeMap(stationMap.values());
 
-    const destinationRecord = stationMap.get(destination);
-    if (!destinationRecord) {
+    if (!stationMap.has(destination)) {
       return NextResponse.json(
         { error: `Unknown destination station: ${destination}` },
         { status: 400 },
       );
     }
 
-    const destinationStation = toRouteStation(destinationRecord, destination);
+    const destinationStation = toRouteStation(destination, stationMap, stationCodeMap);
     const routes: RouteDetails[] = [];
 
     for (const origin of uniqueOrigins) {
-      const originRecord = stationMap.get(origin);
-      if (!originRecord) {
+      if (!stationMap.has(origin)) {
         return NextResponse.json(
           { error: `Unknown origin station: ${origin}` },
           { status: 400 },
@@ -141,14 +181,14 @@ export async function POST(req: NextRequest) {
       }
 
       const { steps, totalTime } = await getRouteStepsBetweenStations(origin, destination);
-      const { segments, interchangeIds } = buildSegments(steps, stationMap);
+      const { segments, interchangeIds } = buildSegments(steps, stationMap, stationCodeMap);
 
       const interchangePoints: RouteStation[] = [...interchangeIds].map((stationId) =>
-        toRouteStation(stationMap.get(stationId), stationId),
+        toRouteStation(stationId, stationMap, stationCodeMap),
       );
 
       routes.push({
-        origin: toRouteStation(originRecord, origin),
+        origin: toRouteStation(origin, stationMap, stationCodeMap),
         destination: destinationStation,
         total_time: totalTime,
         segments,
