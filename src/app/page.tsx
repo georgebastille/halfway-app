@@ -1,21 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import AutocompleteInput from "./components/AutocompleteInput";
 import type {
   MeetingPointResult,
   StationOption,
   StationSelection,
+  RouteStation,
+  RoutesResponse,
 } from "../lib/models";
+import MapView from "./components/MapView";
 import {
   UserGroupIcon,
   ClockIcon,
   PlusCircleIcon,
   MapPinIcon,
+  MapIcon,
 } from "@heroicons/react/24/outline";
 
 export default function Home() {
-  const createEmptySelection = (): StationSelection => ({ id: null, name: "" });
+  const createEmptySelection = (): StationSelection => ({
+    id: null,
+    name: "",
+    latitude: null,
+    longitude: null,
+  });
   const [stationInputs, setStationInputs] = useState<StationSelection[]>([
     createEmptySelection(),
     createEmptySelection(),
@@ -26,6 +35,11 @@ export default function Home() {
   const [results, setResults] = useState<MeetingPointResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDestinationId, setSelectedDestinationId] = useState<string | null>(null);
+  const [routesData, setRoutesData] = useState<RoutesResponse | null>(null);
+  const [isRoutesLoading, setIsRoutesLoading] = useState(false);
+  const [routesError, setRoutesError] = useState<string | null>(null);
+  const pendingDestinationRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetch("/api/stations")
@@ -40,10 +54,18 @@ export default function Home() {
       next[index] = value;
       return next;
     });
+    setSelectedDestinationId(null);
+    setRoutesData(null);
+    setRoutesError(null);
+    pendingDestinationRef.current = null;
   };
 
   const addStationInput = () => {
     setStationInputs((prev) => [...prev, createEmptySelection()]);
+    setSelectedDestinationId(null);
+    setRoutesData(null);
+    setRoutesError(null);
+    pendingDestinationRef.current = null;
   };
 
   const updateSliderText = (value: number) => {
@@ -73,6 +95,10 @@ export default function Home() {
     if (validSelections.length < 2) {
       setResults([]);
       setError("Please enter at least two valid station selections.");
+      setSelectedDestinationId(null);
+      setRoutesData(null);
+      setRoutesError(null);
+      pendingDestinationRef.current = null;
       return;
     }
 
@@ -97,15 +123,28 @@ export default function Home() {
 
       const data: MeetingPointResult[] = await response.json();
       setResults(data);
+      if (
+        selectedDestinationId &&
+        !data.some((result) => result.station_code === selectedDestinationId)
+      ) {
+        setSelectedDestinationId(null);
+        setRoutesData(null);
+        setRoutesError(null);
+        pendingDestinationRef.current = null;
+      }
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
       setResults([]);
+      setSelectedDestinationId(null);
+      setRoutesData(null);
+      setRoutesError(null);
+      pendingDestinationRef.current = null;
     } finally {
       setIsLoading(false);
     }
-  }, [stationInputs, fairnessSlider]);
+  }, [stationInputs, fairnessSlider, selectedDestinationId]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -114,6 +153,98 @@ export default function Home() {
 
     return () => clearTimeout(debounceTimer);
   }, [fetchMeetingPoints]);
+
+  const fetchRoutesForDestination = useCallback(
+    async (destinationId: string) => {
+      const validSelections = stationInputs.filter(
+        (selection): selection is StationSelectionWithId =>
+          typeof selection.id === "string" && selection.id.length > 0,
+      );
+
+      if (validSelections.length === 0) {
+        if (pendingDestinationRef.current === destinationId) {
+          setRoutesError(
+            "Please select at least one valid starting station before viewing routes.",
+          );
+          setIsRoutesLoading(false);
+        }
+        return;
+      }
+
+      if (pendingDestinationRef.current === destinationId) {
+        setIsRoutesLoading(true);
+      }
+
+      try {
+        const response = await fetch("/api/routes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            origins: validSelections.map((selection) => selection.id),
+            destination: destinationId,
+          }),
+        });
+
+        if (!response.ok) {
+          let errorMessage = "Failed to fetch routes";
+          try {
+            const errData = await response.json();
+            if (errData?.error) {
+              errorMessage = errData.error;
+            }
+          } catch {
+            // Ignore JSON parse errors
+          }
+          throw new Error(errorMessage);
+        }
+
+        const data: RoutesResponse = await response.json();
+
+        if (pendingDestinationRef.current === destinationId) {
+          setRoutesData(data);
+          setRoutesError(null);
+        }
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "An unexpected error occurred";
+        if (pendingDestinationRef.current === destinationId) {
+          setRoutesError(errorMessage);
+          setRoutesData(null);
+        }
+      } finally {
+        if (pendingDestinationRef.current === destinationId) {
+          setIsRoutesLoading(false);
+        }
+      }
+    },
+    [stationInputs],
+  );
+
+  const handleDestinationSelect = (stationCode: string) => {
+    if (stationCode === selectedDestinationId && routesData) {
+      return;
+    }
+    pendingDestinationRef.current = stationCode;
+    setSelectedDestinationId(stationCode);
+    setRoutesData(null);
+    setRoutesError(null);
+    void fetchRoutesForDestination(stationCode);
+  };
+
+  const selectedDestinationOption = selectedDestinationId
+    ? stationOptions.find((option) => option.id === selectedDestinationId)
+    : null;
+
+  const mapDestination: RouteStation | null =
+    routesData?.destination ??
+    (selectedDestinationOption
+      ? {
+          station_id: selectedDestinationOption.id,
+          station_name: selectedDestinationOption.name,
+          latitude: selectedDestinationOption.latitude ?? null,
+          longitude: selectedDestinationOption.longitude ?? null,
+        }
+      : null);
 
   return (
     <div className="min-h-screen text-gray-800">
@@ -188,6 +319,43 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
+              <MapIcon className="h-6 w-6 mr-3" />
+              Journey Map
+            </h2>
+            <MapView
+              origins={stationInputs}
+              destination={mapDestination}
+              routes={routesData?.routes ?? null}
+              isLoadingRoutes={isRoutesLoading}
+            />
+            <div className="mt-3 text-sm text-gray-600">
+              {routesError ? (
+                <p className="text-red-500">{routesError}</p>
+              ) : selectedDestinationId ? (
+                isRoutesLoading ? (
+                  <p>Plotting the journeys...</p>
+                ) : routesData ? (
+                  <p>
+                    Showing routes from each starting point to{" "}
+                    <span className="font-semibold">
+                      {routesData.destination.station_name}
+                    </span>
+                    .
+                  </p>
+                ) : (
+                  <p>Routes will appear here once they are ready.</p>
+                )
+              ) : (
+                <p>
+                  Add at least two starting stations, then choose a meeting
+                  point to see the routes.
+                </p>
+              )}
+            </div>
+          </div>
+
           <div id="results" className="mt-10">
             <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
               <MapPinIcon className="h-6 w-6 mr-3" />
@@ -199,35 +367,58 @@ export default function Home() {
             {error && <p className="text-center text-red-500">{error}</p>}
             <ul className="space-y-4">
               {results.length > 0
-                ? results.slice(0, 5).map((result) => (
-                    <li
-                      key={result.station_code}
-                      className="bg-white rounded-lg shadow-md p-5 transition hover:shadow-lg"
-                    >
-                      <h3 className="text-xl font-bold text-blue-600">
-                        {result.station_name}
-                      </h3>
-                      <div className="mt-4 space-y-2">
-                        {result.journeys.map((journey) => (
-                          <div
-                            key={journey.from_station}
-                            className="flex justify-between items-center text-gray-700"
-                          >
-                            <span className="font-medium">
-                              {journey.from_station}
-                            </span>
-                            <span className="text-lg font-semibold">
-                              {journey.time} min
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between text-gray-500 text-sm">
-                        <span>Avg: {result.mean_time.toFixed(1)}m</span>
-                        <span>Unfairness: {result.variance.toFixed(1)}</span>
-                      </div>
-                    </li>
-                  ))
+                ? results.slice(0, 5).map((result) => {
+                    const isSelected =
+                      selectedDestinationId === result.station_code;
+                    const baseClasses =
+                      "bg-white rounded-lg p-5 transition border focus:outline-none";
+                    const stateClasses = isSelected
+                      ? "border-blue-500 shadow-lg ring-1 ring-blue-200"
+                      : "border-transparent shadow-md hover:shadow-lg cursor-pointer";
+                    const cardClasses = `${baseClasses} ${stateClasses}`;
+
+                    return (
+                      <li
+                        key={result.station_code}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={isSelected}
+                        onClick={() =>
+                          handleDestinationSelect(result.station_code)
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleDestinationSelect(result.station_code);
+                          }
+                        }}
+                        className={cardClasses}
+                      >
+                        <h3 className="text-xl font-bold text-blue-600">
+                          {result.station_name}
+                        </h3>
+                        <div className="mt-4 space-y-2">
+                          {result.journeys.map((journey) => (
+                            <div
+                              key={journey.from_station}
+                              className="flex justify-between items-center text-gray-700"
+                            >
+                              <span className="font-medium">
+                                {journey.from_station}
+                              </span>
+                              <span className="text-lg font-semibold">
+                                {journey.time} min
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between text-gray-500 text-sm">
+                          <span>Avg: {result.mean_time.toFixed(1)}m</span>
+                          <span>Unfairness: {result.variance.toFixed(1)}</span>
+                        </div>
+                      </li>
+                    );
+                  })
                 : !isLoading &&
                   !error && (
                     <li className="text-center text-gray-500">

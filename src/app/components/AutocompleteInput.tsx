@@ -137,7 +137,7 @@ export default function AutocompleteInput({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    onChange({ id: null, name: newValue });
+    onChange({ id: null, name: newValue, latitude: null, longitude: null });
 
     if (newValue && newValue.length > 0) {
       const results = fuzzyMatch(newValue, options);
@@ -148,7 +148,12 @@ export default function AutocompleteInput({
   };
 
   const handleSuggestionClick = (suggestion: StationOption) => {
-    onChange({ id: suggestion.id, name: suggestion.name });
+    onChange({
+      id: suggestion.id,
+      name: suggestion.name,
+      latitude: suggestion.latitude ?? null,
+      longitude: suggestion.longitude ?? null,
+    });
     setSuggestions([]);
   };
 

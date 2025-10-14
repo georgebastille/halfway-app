@@ -47,5 +47,7 @@ export async function getStationOptions(): Promise<StationOption[]> {
     .map((station) => ({
       id: station.station_id,
       name: toTitleCase(station.station_name),
+      latitude: station.latitude ?? null,
+      longitude: station.longitude ?? null,
     }));
 }
