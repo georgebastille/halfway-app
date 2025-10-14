@@ -296,7 +296,7 @@ export default function MapView({
         style: styleUrl,
         center: DEFAULT_CENTER,
         zoom: DEFAULT_ZOOM,
-        attributionControl: true,
+        attributionControl: { compact: true },
       });
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");

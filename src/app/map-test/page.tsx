@@ -47,7 +47,7 @@ export default function MapTestPage() {
         style: styleUrl,
         center: DEFAULT_VIEW.center,
         zoom: DEFAULT_VIEW.zoom,
-        attributionControl: true,
+        attributionControl: { compact: true },
       });
 
       map.addControl(new maplibregl.NavigationControl(), "top-right");
