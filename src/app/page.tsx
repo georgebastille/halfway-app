@@ -376,6 +376,10 @@ export default function Home() {
                       ? "border-blue-500 shadow-lg ring-1 ring-blue-200"
                       : "border-transparent shadow-md hover:shadow-lg cursor-pointer";
                     const cardClasses = `${baseClasses} ${stateClasses}`;
+                    const isCurrentRoutesLoaded =
+                      routesData?.destination.station_id === result.station_code;
+                    const isFetchingRoutesForSelection =
+                      isRoutesLoading && selectedDestinationId === result.station_code;
 
                     return (
                       <li
@@ -416,6 +420,82 @@ export default function Home() {
                           <span>Avg: {result.mean_time.toFixed(1)}m</span>
                           <span>Unfairness: {result.variance.toFixed(1)}</span>
                         </div>
+                        {isSelected && (
+                          <div className="mt-4 border-t border-gray-200 pt-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                                Routes from your starting points
+                              </h4>
+                              {isRoutesLoading && (
+                                <span className="text-xs text-gray-500">Loading...</span>
+                              )}
+                            </div>
+                            {routesError ? (
+                              <p className="mt-2 text-sm text-red-500">{routesError}</p>
+                            ) : isCurrentRoutesLoaded && routesData?.routes.length ? (
+                              <div className="mt-3 overflow-x-auto">
+                                <table className="min-w-full text-left text-sm">
+                                  <thead className="text-xs uppercase text-gray-500">
+                                    <tr>
+                                      <th className="pb-2 pr-3 font-semibold">Start</th>
+                                      <th className="pb-2 pr-3 font-semibold">Route</th>
+                                      <th className="pb-2 font-semibold text-right">Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                    {routesData.routes.map((route, routeIndex) => {
+                                      const stops = [
+                                        route.origin.station_name,
+                                        ...route.interchange_points.map(
+                                          (point) => point.station_name,
+                                        ),
+                                        routesData.destination.station_name,
+                                      ];
+
+                                      return (
+                                        <tr key={`${route.origin.station_id}-${routeIndex}`}>
+                                          <td className="py-2 pr-3 font-medium text-gray-800">
+                                            {route.origin.station_name}
+                                          </td>
+                                          <td className="py-2 pr-3 text-gray-700">
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                              {stops.map((stop, stopIndex) => (
+                                                <span
+                                                  key={`${stop}-${stopIndex}`}
+                                                  className="inline-flex items-center"
+                                                >
+                                                  <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
+                                                    {stop}
+                                                  </span>
+                                                  {stopIndex < stops.length - 1 && (
+                                                    <span className="mx-1 text-[10px] text-gray-400">
+                                                      {"->"}
+                                                    </span>
+                                                  )}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </td>
+                                          <td className="py-2 text-right text-gray-800">
+                                            {route.total_time} min
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : isFetchingRoutesForSelection ? (
+                              <p className="mt-2 text-sm text-gray-600">
+                                Fetching routes for this meeting point...
+                              </p>
+                            ) : (
+                              <p className="mt-2 text-sm text-gray-600">
+                                Select at least two starting stations to see the step-by-step routes.
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </li>
                     );
                   })
