@@ -15,7 +15,29 @@ import {
   PlusCircleIcon,
   MapPinIcon,
   MapIcon,
+  ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
+
+const VENUE_TYPES = [
+  { value: "pubs", label: "Pubs" },
+  { value: "restaurants", label: "Restaurants" },
+  { value: "cafes", label: "Cafes" },
+  { value: "bars", label: "Bars" },
+  { value: "parks", label: "Parks" },
+  { value: "things to do", label: "Things to do" },
+];
+
+function buildNearbyUrl(
+  venueType: string,
+  stationName: string,
+  lat?: number | null,
+  lng?: number | null,
+): string {
+  if (lat && lng) {
+    return `https://www.google.com/maps/search/${encodeURIComponent(venueType)}/@${lat},${lng},16z`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueType + " near " + stationName + ", London")}`;
+}
 
 export default function Home() {
   const createEmptySelection = (): StationSelection => ({
@@ -36,6 +58,7 @@ export default function Home() {
   const [routesData, setRoutesData] = useState<RoutesResponse | null>(null);
   const [isRoutesLoading, setIsRoutesLoading] = useState(false);
   const [routesError, setRoutesError] = useState<string | null>(null);
+  const [selectedVenueType, setSelectedVenueType] = useState("pubs");
   const pendingDestinationRef = useRef<string | null>(null);
   const urlInitialized = useRef(false);
 
@@ -366,6 +389,10 @@ export default function Home() {
                     const isFetchingRoutesForSelection =
                       isRoutesLoading && selectedDestinationId === result.station_code;
 
+                    const stationOpt = stationOptions.find(
+                      (o) => o.id === result.station_code,
+                    );
+
                     return (
                       <li
                         key={result.station_code}
@@ -479,6 +506,41 @@ export default function Home() {
                                 Select at least two starting stations to see the step-by-step routes.
                               </p>
                             )}
+                            <div
+                              className="mt-4 pt-4 border-t border-gray-200"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm text-gray-600">Show me</span>
+                                <select
+                                  value={selectedVenueType}
+                                  onChange={(e) => setSelectedVenueType(e.target.value)}
+                                  className="text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                >
+                                  {VENUE_TYPES.map((vt) => (
+                                    <option key={vt.value} value={vt.value}>
+                                      {vt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <span className="text-sm text-gray-600">nearby</span>
+                                <a
+                                  href={buildNearbyUrl(
+                                    selectedVenueType,
+                                    result.station_name,
+                                    stationOpt?.latitude,
+                                    stationOpt?.longitude,
+                                  )}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+                                >
+                                  <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                                  Open in Maps
+                                </a>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </li>
