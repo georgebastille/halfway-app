@@ -37,6 +37,7 @@ export default function Home() {
   const [isRoutesLoading, setIsRoutesLoading] = useState(false);
   const [routesError, setRoutesError] = useState<string | null>(null);
   const pendingDestinationRef = useRef<string | null>(null);
+  const urlInitialized = useRef(false);
 
   useEffect(() => {
     fetch("/api/stations")
@@ -44,6 +45,26 @@ export default function Home() {
       .then((data: StationOption[]) => setStationOptions(data))
       .catch((err) => console.error("Failed to fetch stations:", err));
   }, []);
+
+  // Restore station selections from URL query params once station options are loaded.
+  // Must run before the URL-sync effect starts writing, hence the urlInitialized gate.
+  useEffect(() => {
+    if (stationOptions.length === 0 || urlInitialized.current) return;
+
+    const ids = new URLSearchParams(window.location.search).getAll("s");
+    if (ids.length > 0) {
+      const selections = ids.map((id) => {
+        const opt = stationOptions.find((o) => o.id === id);
+        return opt
+          ? { id: opt.id, name: opt.name, latitude: opt.latitude ?? null, longitude: opt.longitude ?? null }
+          : createEmptySelection();
+      });
+      while (selections.length < 2) selections.push(createEmptySelection());
+      setStationInputs(selections);
+    }
+
+    urlInitialized.current = true;
+  }, [stationOptions]);
 
   const handleStationChange = (index: number, value: StationSelection) => {
     setStationInputs((prev) => {
@@ -113,6 +134,18 @@ export default function Home() {
     const debounceTimer = setTimeout(fetchMeetingPoints, 500);
     return () => clearTimeout(debounceTimer);
   }, [fetchMeetingPoints]);
+
+  // Keep the URL in sync with current station selections so the search is shareable.
+  // Skipped until urlInitialized is true to avoid clobbering URL params on first render.
+  useEffect(() => {
+    if (!urlInitialized.current) return;
+    const params = new URLSearchParams();
+    stationInputs.forEach((s) => {
+      if (s.id) params.append("s", s.id);
+    });
+    const search = params.toString();
+    window.history.replaceState(null, "", search ? `?${search}` : window.location.pathname);
+  }, [stationInputs]);
 
   // Reset selected destination if it's no longer in results
   useEffect(() => {
