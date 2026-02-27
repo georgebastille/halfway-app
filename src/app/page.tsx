@@ -12,7 +12,6 @@ import type {
 import MapView from "./components/MapView";
 import {
   UserGroupIcon,
-  ClockIcon,
   PlusCircleIcon,
   MapPinIcon,
   MapIcon,
@@ -30,8 +29,6 @@ export default function Home() {
     createEmptySelection(),
   ]);
   const [stationOptions, setStationOptions] = useState<StationOption[]>([]);
-  const [fairnessSlider, setFairnessSlider] = useState(2);
-  const [sliderValueText, setSliderValueText] = useState("Balanced");
   const [results, setResults] = useState<MeetingPointResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,23 +65,6 @@ export default function Home() {
     pendingDestinationRef.current = null;
   };
 
-  const updateSliderText = (value: number) => {
-    const textMap = [
-      "Fastest",
-      "Leaning Towards Fastest",
-      "Balanced",
-      "Leaning Towards Fairest",
-      "Fairest",
-    ];
-    setSliderValueText(textMap[value]);
-  };
-
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
-    setFairnessSlider(value);
-    updateSliderText(value);
-  };
-
   type StationSelectionWithId = StationSelection & { id: string };
 
   const fetchMeetingPoints = useCallback(async () => {
@@ -102,7 +82,7 @@ export default function Home() {
     setError(null);
 
     try {
-      const fairnessWeight = (fairnessSlider / 4) * 0.9 + 0.1;
+      const fairnessWeight = 0.55; // Fixed at balanced (middle) position
       const response = await fetch("/api/fairest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,7 +107,7 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, [stationInputs, fairnessSlider]);
+  }, [stationInputs]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(fetchMeetingPoints, 500);
@@ -289,28 +269,6 @@ export default function Home() {
               Add Another Starting Point
             </button>
 
-            <div className="mt-8">
-              <label
-                htmlFor="fairness-slider"
-                className="flex items-center text-lg font-medium mb-3 text-gray-700"
-              >
-                <ClockIcon className="h-6 w-6 mr-3" />
-                Fairness vs. Speed
-              </label>
-              <input
-                type="range"
-                id="fairness-slider"
-                min="0"
-                max="4"
-                step="1"
-                value={fairnessSlider}
-                onChange={handleSliderChange}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="text-center text-gray-600 mt-2" id="slider-value">
-                {sliderValueText}
-              </div>
-            </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6 mt-8">

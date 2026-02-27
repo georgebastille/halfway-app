@@ -35,15 +35,16 @@ export default function AboutPage() {
             </h2>
             <div className="space-y-4 text-gray-600">
               <p>
-                Halfway helps you find the most convenient station to meet
-                someone in London based on TfL travel times.
+                Halfway helps you find the most convenient station for a group
+                to meet, balancing fairness and travel time across everyone in
+                the group.
               </p>
               <ol className="list-decimal list-inside space-y-2">
                 <li>
                   <strong>Enter Starting Points:</strong> Begin by typing the
-                  names of the starting tube, overground, or tram stations for
-                  each person in the input fields. An autocomplete list will
-                  appear to help you select the correct station.
+                  names of the starting stations for each person in the input
+                  fields. An autocomplete list will appear to help you select
+                  the correct station.
                 </li>
                 <li>
                   <strong>Add More People:</strong> If you&apos;re meeting with
@@ -51,29 +52,11 @@ export default function AboutPage() {
                   Point&quot; button to add more input fields.
                 </li>
                 <li>
-                  <strong>Adjust Fairness vs. Speed:</strong> Use the slider to
-                  define what &quot;best&quot; means to you.
-                  <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
-                    <li>
-                      <strong>Fairest:</strong> Minimizes the difference in
-                      travel time for everyone.
-                    </li>
-                    <li>
-                      <strong>Fastest:</strong> Minimizes the average travel
-                      time for the group.
-                    </li>
-                    <li>
-                      <strong>Balanced:</strong> A mix of both, which is the
-                      default.
-                    </li>
-                  </ul>
-                </li>
-                <li>
                   <strong>View Results:</strong> The app will automatically
-                  calculate and display the top 5 meeting points that best match
-                  your criteria. Each result shows the destination station, the
-                  individual journey times, the average travel time, and an
-                  &quot;unfairness&quot; score (the variance in travel times).
+                  calculate and display the top 5 meeting points. Each result
+                  shows the destination station, the individual journey times,
+                  the average travel time, and an &quot;unfairness&quot; score
+                  (the variance in travel times).
                 </li>
               </ol>
             </div>
@@ -85,10 +68,11 @@ export default function AboutPage() {
             </h2>
             <p className="text-gray-600">
               This application was built using Next.js, TypeScript, and Tailwind
-              CSS. It queries a pre-built SQLite database of TfL station and
-              travel time data to find optimal meeting points. If you&apos;re
-              interested in the technical details of how it was built, you can
-              read the full story in my blog post.
+              CSS. When the app starts, it builds an in-memory transport graph
+              from the station and connection data, then uses Dijkstra&apos;s
+              algorithm to find optimal meeting points. If you&apos;re interested
+              in the technical details of how it was built, you can read the
+              full story in my blog post.
             </p>
             <div className="mt-4">
               <a
