@@ -94,11 +94,7 @@ export default function Home() {
     );
     if (validSelections.length < 2) {
       setResults([]);
-      setError("Please enter at least two valid station selections.");
-      setSelectedDestinationId(null);
-      setRoutesData(null);
-      setRoutesError(null);
-      pendingDestinationRef.current = null;
+      setError(null);
       return;
     }
 
@@ -123,36 +119,34 @@ export default function Home() {
 
       const data: MeetingPointResult[] = await response.json();
       setResults(data);
-      if (
-        selectedDestinationId &&
-        !data.some((result) => result.station_code === selectedDestinationId)
-      ) {
-        setSelectedDestinationId(null);
-        setRoutesData(null);
-        setRoutesError(null);
-        pendingDestinationRef.current = null;
-      }
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
       setResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [stationInputs, fairnessSlider]);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(fetchMeetingPoints, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [fetchMeetingPoints]);
+
+  // Reset selected destination if it's no longer in results
+  useEffect(() => {
+    if (
+      selectedDestinationId &&
+      results.length > 0 &&
+      !results.some((r) => r.station_code === selectedDestinationId)
+    ) {
       setSelectedDestinationId(null);
       setRoutesData(null);
       setRoutesError(null);
       pendingDestinationRef.current = null;
-    } finally {
-      setIsLoading(false);
     }
-  }, [stationInputs, fairnessSlider, selectedDestinationId]);
-
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      fetchMeetingPoints();
-    }, 500); // Debounce API calls
-
-    return () => clearTimeout(debounceTimer);
-  }, [fetchMeetingPoints]);
+  }, [results, selectedDestinationId]);
 
   const fetchRoutesForDestination = useCallback(
     async (destinationId: string) => {
