@@ -277,35 +277,33 @@ export default function Home() {
       : null);
 
   return (
-    <div className="min-h-screen text-gray-800">
+    <div className="min-h-screen bg-slate-50 text-gray-800">
       {/* Mobile title - only visible when sidebar is closed */}
-      <header className="lg:hidden bg-white border-b border-gray-200 py-6 px-4 pt-20 pb-12 overflow-visible">
-        <div className="text-center overflow-visible">
-          <h1
-            className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400 overflow-visible"
-            style={{ lineHeight: "1.3" }}
-          >
-            Halfway
-          </h1>
-        </div>
+      <header className="lg:hidden bg-white/80 backdrop-blur-sm border-b border-gray-100 px-4 pt-16 pb-5">
+        <h1
+          className="text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400"
+          style={{ lineHeight: "1.3" }}
+        >
+          Halfway
+        </h1>
       </header>
 
       <div className="container mx-auto p-4 sm:p-6 lg:p-8 pt-4 lg:pt-8">
         <main className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
-              <UserGroupIcon className="h-6 w-6 mr-3" />
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-5 flex items-center gap-2">
+              <UserGroupIcon className="h-4 w-4" />
               Starting Points
-            </h2>
+            </p>
 
-            <div id="station-inputs" className="space-y-4 mb-6">
+            <div id="station-inputs" className="space-y-3 mb-5">
               {stationInputs.map((input, index) => (
-                <div key={index} className="flex items-center space-x-3">
+                <div key={index} className="flex items-center gap-3">
                   <label
                     htmlFor={`station${index + 1}`}
-                    className="text-gray-600 w-28"
+                    className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-sm font-semibold"
                   >
-                    Station {index + 1}:
+                    {index + 1}
                   </label>
                   <AutocompleteInput
                     id={`station${index + 1}`}
@@ -319,19 +317,19 @@ export default function Home() {
 
             <button
               onClick={addStationInput}
-              className="w-full flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 rounded-md text-gray-500 hover:text-gray-700 hover:border-gray-400 transition"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-dashed border-gray-200 rounded-xl text-gray-400 hover:text-gray-600 hover:border-gray-300 transition text-sm"
             >
-              <PlusCircleIcon className="h-5 w-5 mr-2" />
-              Add Another Starting Point
+              <PlusCircleIcon className="h-4 w-4" />
+              Add another person
             </button>
 
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6 mt-8">
-            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
-              <MapIcon className="h-6 w-6 mr-3" />
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-5 flex items-center gap-2">
+              <MapIcon className="h-4 w-4" />
               Journey Map
-            </h2>
+            </p>
             <MapView
               origins={stationInputs}
               destination={mapDestination}
@@ -364,25 +362,25 @@ export default function Home() {
             </div>
           </div>
 
-          <div id="results" className="mt-10">
-            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-700">
-              <MapPinIcon className="h-6 w-6 mr-3" />
-              Top 5 Stations to Meet at:
-            </h2>
+          <div id="results" className="mt-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
+              <MapPinIcon className="h-4 w-4" />
+              Best meeting points
+            </p>
             {isLoading && (
               <p className="text-center">Finding the best spots...</p>
             )}
             {error && <p className="text-center text-red-500">{error}</p>}
-            <ul className="space-y-4">
+            <ul className="space-y-3">
               {results.length > 0
                 ? results.slice(0, 5).map((result) => {
                     const isSelected =
                       selectedDestinationId === result.station_code;
                     const baseClasses =
-                      "bg-white rounded-lg p-5 transition border focus:outline-none";
+                      "bg-white rounded-2xl p-5 transition border focus:outline-none cursor-pointer";
                     const stateClasses = isSelected
-                      ? "border-blue-500 shadow-lg ring-1 ring-blue-200"
-                      : "border-transparent shadow-md hover:shadow-lg cursor-pointer";
+                      ? "border-blue-300 shadow-md ring-2 ring-blue-100"
+                      : "border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200";
                     const cardClasses = `${baseClasses} ${stateClasses}`;
                     const isCurrentRoutesLoaded =
                       routesData?.destination.station_id === result.station_code;
@@ -410,33 +408,34 @@ export default function Home() {
                         }}
                         className={cardClasses}
                       >
-                        <h3 className="text-xl font-bold text-blue-600">
+                        <h3 className="text-lg font-semibold text-slate-800">
                           {result.station_name}
                         </h3>
-                        <div className="mt-4 space-y-2">
+                        <div className="mt-3 space-y-1.5">
                           {result.journeys.map((journey) => (
                             <div
                               key={journey.from_station}
-                              className="flex justify-between items-center text-gray-700"
+                              className="flex justify-between items-center"
                             >
-                              <span className="font-medium">
+                              <span className="text-sm text-gray-500">
                                 {journey.from_station}
                               </span>
-                              <span className="text-lg font-semibold">
+                              <span className="text-sm font-semibold text-slate-700">
                                 {journey.time} min
                               </span>
                             </div>
                           ))}
                         </div>
-                        <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between text-gray-500 text-sm">
-                          <span>Avg: {result.mean_time.toFixed(1)}m</span>
-                          <span>Unfairness: {result.variance.toFixed(1)}</span>
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <span className="text-xs bg-slate-50 text-slate-500 px-2.5 py-1 rounded-full">
+                            {result.mean_time.toFixed(0)} min avg
+                          </span>
                         </div>
                         {isSelected && (
-                          <div className="mt-4 border-t border-gray-200 pt-4">
+                          <div className="mt-4 border-t border-gray-100 pt-4">
                             <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                                Routes from your starting points
+                              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                                Routes
                               </h4>
                               {isRoutesLoading && (
                                 <span className="text-xs text-gray-500">Loading...</span>
