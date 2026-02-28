@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { track } from "@vercel/analytics";
 import AutocompleteInput from "./components/AutocompleteInput";
 import type {
   MeetingPointResult,
@@ -16,6 +17,8 @@ import {
   MapPinIcon,
   MapIcon,
   ArrowTopRightOnSquareIcon,
+  LinkIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 
 const VENUE_TYPES = [
@@ -59,6 +62,7 @@ export default function Home() {
   const [isRoutesLoading, setIsRoutesLoading] = useState(false);
   const [routesError, setRoutesError] = useState<string | null>(null);
   const [selectedVenueType, setSelectedVenueType] = useState("pubs");
+  const [linkCopied, setLinkCopied] = useState(false);
   const pendingDestinationRef = useRef<string | null>(null);
   const urlInitialized = useRef(false);
 
@@ -102,7 +106,10 @@ export default function Home() {
   };
 
   const addStationInput = () => {
-    setStationInputs((prev) => [...prev, createEmptySelection()]);
+    setStationInputs((prev) => {
+      track("add_station", { total_stations: prev.length + 1 });
+      return [...prev, createEmptySelection()];
+    });
     setSelectedDestinationId(null);
     setRoutesData(null);
     setRoutesError(null);
@@ -143,6 +150,7 @@ export default function Home() {
 
       const data: MeetingPointResult[] = await response.json();
       setResults(data);
+      track("find_meeting_points", { station_count: validSelections.length });
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
@@ -254,11 +262,20 @@ export default function Home() {
     if (stationCode === selectedDestinationId && routesData) {
       return;
     }
+    track("select_destination", { station_code: stationCode });
     pendingDestinationRef.current = stationCode;
     setSelectedDestinationId(stationCode);
     setRoutesData(null);
     setRoutesError(null);
     void fetchRoutesForDestination(stationCode);
+  };
+
+  const copyShareLink = () => {
+    void navigator.clipboard.writeText(window.location.href).then(() => {
+      track("copy_share_link");
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
   };
 
   const selectedDestinationOption = selectedDestinationId
@@ -363,10 +380,30 @@ export default function Home() {
           </div>
 
           <div id="results" className="mt-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
-              <MapPinIcon className="h-4 w-4" />
-              Best meeting points
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                <MapPinIcon className="h-4 w-4" />
+                Best meeting points
+              </p>
+              {results.length > 0 && (
+                <button
+                  onClick={copyShareLink}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:text-gray-700 hover:border-gray-300 transition"
+                >
+                  {linkCopied ? (
+                    <>
+                      <CheckIcon className="h-3.5 w-3.5 text-green-500" />
+                      <span className="text-green-600">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <LinkIcon className="h-3.5 w-3.5" />
+                      Share
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
             {isLoading && (
               <p className="text-center">Finding the best spots...</p>
             )}
@@ -533,6 +570,7 @@ export default function Home() {
                                   )}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  onClick={() => track("open_in_maps", { venue_type: selectedVenueType, station: result.station_name })}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
                                 >
                                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
