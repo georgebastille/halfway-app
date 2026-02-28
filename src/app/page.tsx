@@ -103,7 +103,7 @@ export default function Home() {
     setError(null);
 
     try {
-      const fairnessWeight = 0.55; // Fixed at balanced (middle) position
+      const fairnessWeight = 0.325; // Leaning towards fastest (one in from left on the old slider)
       const response = await fetch("/api/fairest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
