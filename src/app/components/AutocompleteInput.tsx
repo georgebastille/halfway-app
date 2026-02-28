@@ -67,15 +67,15 @@ export default function AutocompleteInput({
         value={value.name}
         onChange={handleInputChange}
         placeholder="Enter station name"
-        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl shadow-sm text-sm text-slate-700 placeholder-gray-400 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 focus:outline-none transition"
       />
       {suggestions.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
           {suggestions.map((suggestion) => (
             <div
               key={suggestion.id}
               onClick={() => handleSuggestionClick(suggestion)}
-              className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+              className="px-4 py-2.5 cursor-pointer text-sm text-slate-700 hover:bg-slate-50 transition-colors"
             >
               {suggestion.name}
             </div>
